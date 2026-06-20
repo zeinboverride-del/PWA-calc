@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculator</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+  color-scheme: dark;
+  font-family: Arial, sans-serif;
+  background: #000;
+  color: #fff;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  height: 100vh; /* Memastikan body memenuhi tinggi layar HP */
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+.calculator {
+  width: 100%; /* Memenuhi lebar screen HP */
+  height: 100vh; /* Memenuhi seluruh tinggi screen HP */
+  padding: 20px;
+  display: flex;
+  flex-direction: column; /* Menyusun display di atas, tombol di bawah */
+  gap: 15px;
+  background: #000; /* Dibuat full black biar menyatu kayak kalkulator bawaan */
+}
+.display {
+  width: 100%;
+  height: 25vh; /* Layar input kalkulator memakan 25% tinggi HP */
+  padding: 20px;
+  font-size: 3rem; /* Ukuran font angka diperbesar biar makin mantap */
+  border: none; /* Menghapus border kotak biar clean */
+  background: #000;
+  color: #fff;
+  text-align: right;
+  outline: none;
+  display: flex;
+  align-items: flex-end; /* Angka bakal mulai dari kanan bawah display */
+}
+.buttons {
+  flex: 1; /* Sisa ruang HP (75%) bakal dihabisin buat grid tombol */
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.button {
+      width: 100%;
+      height: 100%; 
+      border: 2px solid currentColor; /* SAKTI: Warna garis border auto-matching sama warna huruf tombol! */
+      border-radius: 16px;           /* Setelan radius pesanan lu (tidak terlalu bulat). Silakan lu ubah angka ini nanti */
+      background: #000;             /* Tanpa terkecuali, semua background tombol jadi hitam pekat */
+      color: #fff;                  /* Warna default huruf (angka) jadi putih, otomatis bordernya putih */
+      font-size: 1.5rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      display: grid;
+      place-items: center;
+    }
+    .button:active {
+      background: #111;             /* Efek kilasan gelap tipis pas tombol ditekan */
+    }
+    .button.operator { 
+      color: #ff9500; 
+      background: #000;             /* Tetap hitam, huruf orange = border orange */
+    } 
+    .button.function { 
+      color: #00f3ff; 
+      background: #000;             /* Tetap hitam, huruf cyan = border cyan */
+    }
+    .button.equals { 
+      grid-column: span 3; 
+      background: #000;             /* Tombol sama dengan ikut jadi hitam pekat */
+      color: #ff9500;               /* Hurufnya diganti orange biar bordernya ikut orange menyala estetik! */
+      border-radius: 16px;          /* Sesuaikan dengan radius yang lu mau di atas */
+    }
+    .button.filled { 
+      background: #000; 
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <input id="display" class="display" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" />
+    <div class="buttons" id="buttonGrid"></div>
+  </div>
+  <script>
+    const display = document.getElementById('display');
+    const buttonGrid = document.getElementById('buttonGrid');
+
+    const buttons = [
+      { label: 'C', type: 'function' },
+      { label: '⌫', type: 'function' },
+      { label: '智能', type: 'function' }, // Ini label pembawaan simbol asli lu
+      { label: '%', type: 'function' },
+      { label: '÷', type: 'operator' },
+      { label: '7' },
+      { label: '8' },
+      { label: '9' },
+      { label: '%-', type: 'function' },
+      { label: '×', type: 'operator' },
+      { label: '4' },
+      { label: '5' },
+      { label: '6' },
+      { label: '%+', type: 'function' },
+      { label: '-', type: 'operator' },
+      { label: '1' },
+      { label: '2' },
+      { label: '3' },
+      { label: 'xˣ', type: 'function' },
+      { label: '+', type: 'operator' },
+      { label: '0' },
+      { label: '.', type: 'filled' },
+      { label: '=', type: 'equals' }
+    ];
+
+    // Mengembalikan setelan tombol '智能' menjadi 'ˣ√' pas diproses di mesin kalkulator lu
+    buttons[2].label = 'ˣ√'; 
+
+    const symbolMap = {
+      '÷': '÷',
+      '×': '×',
+      'ˣ√': 'ˣ√',
+      '%-': '-%',
+      '%+': '+%',
+      'xˣ': '^',
+      '%': '%'
+    };
+
+    const allowedChars = new Set('0123456789+-*/.%()^ˣ√+%-%');
+
+    function appendCharacter(char) {
+      const value = symbolMap[char] || char;
+      display.value += value;
+      display.scrollLeft = display.scrollWidth;
+    }
+
+    function clearDisplay() {
+      display.value = '';
+    }
+
+    function backspace() {
+      display.value = display.value.slice(0, -1);
+    }
+
+    function sanitizeInput(value) {
+      let result = '';
+      for (const char of value) {
+        if (allowedChars.has(char)) {
+          result += char;
+        }
+      }
+      return result;
+    }
+
+    function buttonEquals() {
+      try {
+        let expr = display.value;
+        expr = expr.replace(/÷/g, '/').replace(/×/g, '*');
+
+        const powPattern = /(\d+\.?\d*)\^(\d+\.?\d*)/;
+        while (expr.includes('^')) {
+          const match = expr.match(powPattern);
+          if (match) {
+            expr = expr.replace(match[0], `Math.pow(${match[1]},${match[2]})`);
+          } else {
+            break;
+          }
+        }
+
+        const rootPattern = /(\d+\.?\d*)ˣ√(\d+\.?\d*)/;
+        while (expr.includes('ˣ√')) {
+          const match = expr.match(rootPattern);
+          if (match) {
+            expr = expr.replace(match[0], `Math.pow(${match[2]}, 1 / ${match[1]})`);
+          } else {
+            expr = expr.replace('ˣ√', '**(1/2)');
+            break;
+          }
+        }
+
+        const discountPattern = /(\d+\.?\d*)-%(\d+\.?\d*)/;
+        while (expr.includes('-%')) {
+          const match = expr.match(discountPattern);
+          if (match) {
+            expr = expr.replace(match[0], `(${match[1]} - (${match[1]} * (${match[2]} / 100)))`);
+          } else {
+            break;
+          }
+        }
+
+        const taxPattern = /(\d+\.?\d*)\+%(\d+\.?\d*)/;
+        while (expr.includes('+%')) {
+          const match = expr.match(taxPattern);
+          if (match) {
+            expr = expr.replace(match[0], `(${match[1]} + (${match[1]} * (${match[2]} / 100)))`);
+          } else {
+            break;
+          }
+        }
+
+        const result = new Function(`return ${expr}`)();
+        display.value = String(result);
+      } catch (error) {
+        display.value = 'Error';
+      }
+    }
+
+    display.addEventListener('keydown', (event) => {
+      const isControlKey = event.ctrlKey || event.metaKey || event.altKey;
+      if (isControlKey) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        buttonEquals();
+        return;
+      }
+      if (event.key.length === 1 && !allowedChars.has(event.key)) {
+        event.preventDefault();
+      }
+    });
+
+    display.addEventListener('input', () => {
+      display.value = sanitizeInput(display.value);
+    });
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        buttonEquals();
+      }
+    });
+
+    buttons.forEach(({ label, type }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button';
+      if (type) button.classList.add(type);
+      button.textContent = label;
+      button.addEventListener('click', () => {
+        if (label === 'C') {
+          clearDisplay();
+        } else if (label === '⌫') {
+          backspace();
+        } else if (label === '=') {
+          buttonEquals();
+        } else {
+          appendCharacter(label);
+        }
+      });
+      buttonGrid.append(button);
+    });
+
+    display.focus();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('PWA Ready to Run'))
+        .catch(err => console.log('Eror:', err));
+    }
+  </script>
+</body>
+</html>
